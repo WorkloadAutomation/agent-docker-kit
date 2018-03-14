@@ -56,7 +56,7 @@ The URL of the  master domain manager. This parameter corresponds to the  Resour
 The name of the  backup master domain manager. This parameter corresponds to the  *BackupResourceAdvisorUrls*  property in *theJobManagerGW.ini*  file.
 
 	**SERVERPORT**  
-The port of the  master domain manager. This parameter corresponds to the  *ResourceAdvisorUrl*  and  *BackupResourceAdvisorUrls * properties in the *JobManagerGW.ini* file.
+The port of the  master domain manager. This parameter corresponds to the  *ResourceAdvisorUrl*  and  *BackupResourceAdvisorUrls* properties in the *JobManagerGW.ini* file.
 
 	**AGENTID**  
 The ID of the agent.
@@ -78,7 +78,7 @@ Set to  YES  to force a refresh of all configuration options. To maintain the la
  ```docker run```  
  To start more container instances, run the following command:  
  ```docker-compose up scale iws_agent=num_instances```  
-
+  
 The following example shows how to install a Dynamic Agent using the docker run command:  
 ```
 docker run -e AGENTNAME=AGENT1 -e AGENTID=C0C04D8E238711E78E0F99F382VAA104 
