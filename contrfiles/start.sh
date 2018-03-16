@@ -22,7 +22,7 @@
 # AGENTHOSTNAME=myhost.example.com         # hostname in JobManager.ini and JobManagerGWID FullyQualifiedHostname and ResourceAdvisorUrl 
 # RECONFIGURE_AGENT=NO                     # Set to YES to force refresh of all configuration options, must set CURRENT_AGENTID="${AGENTID}" and RECONFIGURE_AGENT=NO to keep last configuration
 # POOLS                                    # Pass a comma separated list of Workstation POOLS where you want to register this agent ex.:POOLS="Po1,Po2"
-
+# HTTPS=YES                                # For z-Centric only. Set to NO to force HTTP, not secured protocol, for the agent local port used to receive job submission from Controller
 # Set some defaults
 AGUSER=wauser
 AGENTHOSTNAME=${AGENTHOSTNAME:-localhost}
@@ -198,18 +198,29 @@ reconfigure_agent (){
     echo "Setting hostname = ${AGENTHOSTNAME} in JobManager.ini and JobManagerGWID"
     $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManager.ini FullyQualifiedHostname ${AGENTHOSTNAME}
     $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini FullyQualifiedHostname ${AGENTHOSTNAME}
-    $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManager.ini ResourceAdvisorUrl https://localhost:31114/ita/JobManagerGW/JobManagerRESTWeb/JobScheduler/resource
+    $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/ita/ita.ini tcp_port 0
+    $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/ita/ita.ini ssl_port 31114
     
-    $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini JobManagerGWURIs https://localhost:31114/ita/JobManagerGW/JobManagerRESTWeb/JobScheduler/resource
-  
     if [ ! -z "$SERVERHOSTNAME" -a ! -z "$SERVERPORT" ]
         then
         echo "Setting server name = ${SERVERHOSTNAME}:${SERVERPORT}"
+        $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini autostart yes
+        $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManager.ini ResourceAdvisorUrl https://localhost:31114/ita/JobManagerGW/JobManagerRESTWeb/JobScheduler/resource
         $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini ResourceAdvisorUrl https://${SERVERHOSTNAME}:${SERVERPORT}/JobManagerRESTWeb/JobScheduler/resource
         if [ ! -z "$BKMSERVERHOSTNAME" ]
             then
             echo "Setting backup server name = ${BKMSERVERHOSTNAME}"
             $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini BackupResourceAdvisorUrls  "https://${BKMSERVERHOSTNAME}:${SERVERPORT}/JobManagerRESTWeb/JobScheduler/resource"
+        fi
+    else
+        $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini autostart no
+        $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManager.ini ResourceAdvisorUrl https://localhost:0/ita/JobManagerGW/JobManagerRESTWeb/JobScheduler/resource
+        $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini JobManagerGWURIs https://localhost:31114/ita/JobManagerGW/JobManagerRESTWeb/JobScheduler/resource
+        
+        if [ "$HTTPS" -eq "NO" ]
+        then
+            $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/ita/ita.ini tcp_port 31114
+            $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/ita/ita.ini ssl_port 0
         fi
     fi
 
@@ -324,24 +335,17 @@ retrieve_properties(){
             copy_certs
             set_properties_from_environment
             reconfigure_agent
+        elif [ ! -z "$URI" ];
+        then
+            echo "Configuring from the zip file downloaded from $URI"
+            getPropertiesFromZip
+            copy_certs
+            set_properties_from_environment
+            reconfigure_agent
         else
-            if [  ! -z "$SERVERHOSTNAME" ];
-            then
-                echo "Configuring from environment variables..."
-                createPropertyFile
-                reconfigure_agent
-            else
-                if [ ! -z "$URI" ];
-                then
-                    echo "Configuring from the zip file downloaded from $URI"
-                    getPropertiesFromZip
-                    copy_certs
-                    set_properties_from_environment
-                    reconfigure_agent
-                else
-                    echo "No parameters were set. Not configured."
-                fi
-            fi
+            echo "Configuring from environment variables..."
+            createPropertyFile
+            reconfigure_agent
         fi
     else
         echo "No configuration change requested."
