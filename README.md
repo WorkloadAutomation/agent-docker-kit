@@ -20,13 +20,19 @@ Run **build-docker-sh** to build the container. This script wraps the docker bui
 
 Dispalys the command usage.
 
-**-s,--server  _server_hostname**
+**-z,--zipfile**
 
-Specifies the hostname of the  master domain manager.
+Specifies The .zip file of the image for the agent installation. 
+Zip's Download available on master domain manager: 
+```https://<server_hostmame>:<https_port>/ConfigDownloadWeb/DownloadAgentServlet?osType=LINUX_X86_64&osArch=X86_64&version=<agent_version>&action=update```  
+
+*https_port* default value is  31116   
+*agent_version* see -v --agver option, for the right value
+
 
 **-p,--port  HTTPS_port**
 
-Specifies the HTTPS port of the  WebSphere Application Server  of the  master domain manager. The default value is 31116.
+Specifies the HTTPS port of the temporary nginx server.
 
 **\[-v,--agver  agent version\]**
 
@@ -37,9 +43,9 @@ Optionally specifies the version of the agent to be used to tag the Docker image
 Optionally specifies the name of the image to be built. The default value is  **workload-scheduler-agent**.
 
 1. To build a new image run the following command:  
-```./build-docker.sh -s server_hostname -p https_port```
+```./build-docker.sh -z <agent_zip_full_path>/TWS94FP1_LNX_X86_64_AGENT.zip```
 
-2. The build script creates a YAML file called docker-compose.yml. To create a container starting from the image, run the following command:  
+2. The build script creates a YAML file called **docker-compose.yml**. To create a container starting from the image, run the following command:  
 ```docker image```  
 The command output is similar to the following:  
 	```
@@ -70,7 +76,14 @@ The hostname of the agent. This parameter corresponds to the  hostname  property
 	**POOLS**  
 Specify a comma-separated list of pool workstations where you want to register the agent.
 
-Set to  YES  to force a refresh of all configuration options. To maintain the last configuration, set CURRENT\_AGENTID="" and RECONFIGURE\_AGENT=NO.
+Set to  YES  to force a refresh of all configuration options. To maintain the last configuration, set CURRENT\_AGENTID="" and RECONFIGURE\_AGENT=NO.  
+
+For z-centric agent, the build script creates a YAML file called **docker-compose-zcentric.yml**.   
+Also you can edit it for the following further customizable parameter:
+
+	**HTTPS**  
+Set to YES to use secured version of HTTP. NO otherwise. The default value is YES.
+
 
  4. Run one of the following commands to start the container:  
  ```docker-compose up -d```  
@@ -78,6 +91,9 @@ Set to  YES  to force a refresh of all configuration options. To maintain the la
  ```docker run```  
  To start more container instances, run the following command:  
  ```docker-compose up scale iws_agent=num_instances```  
+  
+For z-centric agent, start the container, issuing:  
+  ```docker-compose -f docker-compose-zcentric.yml up -d```  
   
 The following example shows how to install a Dynamic Agent using the docker run command:  
 ```
