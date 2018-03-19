@@ -81,7 +81,7 @@ Set to  YES  to force a refresh of all configuration options. To maintain the la
 For z-centric agent, the build script creates a YAML file called **docker-compose-zcentric.yml**.   
 Also you can edit it for the following further customizable parameter:
 
-	**HTTPS**  
+**HTTPS**  
 Set to YES to use secured version of HTTP. NO otherwise. The default value is YES.
 
 
@@ -91,8 +91,8 @@ Set to YES to use secured version of HTTP. NO otherwise. The default value is YE
  ```docker run```  
  To start more container instances, run the following command:  
  ```docker-compose up scale iws_agent=num_instances```  
-  
-For z-centric agent, start the container, issuing:  
+
+  For z-centric agent, start the container, issuing:  
   ```docker-compose -f docker-compose-zcentric.yml up -d```  
   
 The following example shows how to install a Dynamic Agent using the docker run command:  
