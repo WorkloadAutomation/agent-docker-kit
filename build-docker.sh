@@ -156,6 +156,7 @@ cat > docker-compose-zcentric.yml << EOF
 # AGENTNAME=WSAGENT99                      # ComputerSystemDisplayName 
 # AGENTHOSTNAME=myhost.example.com         # hostname in JobManager.ini and JobManagerGWID FullyQualifiedHostname and ResourceAdvisorUrl 
 # RECONFIGURE_AGENT=NO                     # Set to YES to force refresh of all configuration options, must set CURRENT_AGENTID="${AGENTID}" and RECONFIGURE_AGENT=NO to keep last configuration
+# HTTPS=YES                                # For z-Centric only. Set to NO to force HTTP, not secured protocol, for the agent local port used to receive job submission from Controller
 # 
 #
 iws_zagent:
