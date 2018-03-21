@@ -1,4 +1,4 @@
-# Preparing and installing a Docker image for dynamic agents and z-centric
+# Creating a Docker image to run dynamic and z-centric agents
 
 You can run dynamic agents in docker container, this can be used to run jobs remotely, e.g. to call REST APIs or database stored procedures, or to run jobs within the container.
 
