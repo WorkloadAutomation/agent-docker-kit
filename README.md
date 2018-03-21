@@ -1,4 +1,4 @@
-# Preparing and installing a Docker image for dynamic agents
+# Preparing and installing a Docker image for dynamic agents and z-centric
 
 ## Before you begin
 Before you start to prepare, build the Docker image or install it, ensure you have met the following requirements:
