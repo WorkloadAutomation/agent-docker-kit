@@ -20,24 +20,19 @@ The scripts in the project allow the installation of docker image:
 Perform the following steps to build the Docker image:
 Run **build-docker-sh** to build the container. This script wraps the docker build command to build the agent image. The following parameters are supported:
 
- **-h**
-
+ **-h**  
  Dispalys the command usage.
 
- **-z,--zipfile**
-
+ **-z,--zipfile**  
  Specifies the .zip file of the image for the agent installation. 
 
- **-p,--port  HTTPS_port**
-
+ **-p,--port  HTTPS_port**  
  Specifies the HTTPS port of the temporary nginx server.
 
- **\[-v,--agver  agent version\]**
-
+ **\[-v,--agver  agent version\]**  
  Optionally specifies the version of the agent to be used to tag the Docker image. The default value is  9.4.0.01.
 
- **\[-t,--imgname  image name\]**
-
+ **\[-t,--imgname  image name\]**  
  Optionally specifies the name of the image to be built. The default value is  **workload-scheduler-agent**.
 
 To build a new image run the following command:  
