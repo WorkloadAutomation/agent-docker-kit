@@ -20,25 +20,25 @@ The scripts in the project allow the installation of docker image:
 Perform the following steps to build the Docker image:
 Run **build-docker-sh** to build the container. This script wraps the docker build command to build the agent image. The following parameters are supported:
 
-**-h**
+ **-h**
 
-Dispalys the command usage.
+ Dispalys the command usage.
 
-**-z,--zipfile**
+ **-z,--zipfile**
 
-Specifies the .zip file of the image for the agent installation. 
+ Specifies the .zip file of the image for the agent installation. 
 
-**-p,--port  HTTPS_port**
+ **-p,--port  HTTPS_port**
 
-Specifies the HTTPS port of the temporary nginx server.
+ Specifies the HTTPS port of the temporary nginx server.
 
-**\[-v,--agver  agent version\]**
+ **\[-v,--agver  agent version\]**
 
-Optionally specifies the version of the agent to be used to tag the Docker image. The default value is  9.4.0.01.
+ Optionally specifies the version of the agent to be used to tag the Docker image. The default value is  9.4.0.01.
 
-**\[-t,--imgname  image name\]**
+ **\[-t,--imgname  image name\]**
 
-Optionally specifies the name of the image to be built. The default value is  **workload-scheduler-agent**.
+ Optionally specifies the name of the image to be built. The default value is  **workload-scheduler-agent**.
 
 To build a new image run the following command:  
 ```./build-docker.sh -z <agent_zip_full_path>/TWS94FP1_LNX_X86_64_AGENT.zip```
@@ -57,33 +57,33 @@ The build script creates two docker-compose YAML file called **docker-compose.ym
 
 The **docker-compose.yml** file is to run the container as dynamic agent connected to a distributed master and contains the following customizable parameters:
 
-**SERVERHOSTNAME**  
+* **SERVERHOSTNAME**  
 The URL of the  master domain manager. This parameter corresponds to the  ResourceAdvisorUrl  property in *theJobManagerGW.ini*  file.
 
-**BKMSERVERHOSTNAME**  
+* **BKMSERVERHOSTNAME**  
 The name of the  backup master domain manager. This parameter corresponds to the  *BackupResourceAdvisorUrls*  property in *theJobManagerGW.ini*  file.
 
-**SERVERPORT**  
+* **SERVERPORT**  
 The port of the  master domain manager. This parameter corresponds to the  *ResourceAdvisorUrl*  and  *BackupResourceAdvisorUrls* properties in the *JobManagerGW.ini* file.
 
-**AGENTID**  
+* **AGENTID**  
 The ID of the agent.
 
-**AGENTNAME**  
+* **AGENTNAME**  
 The name of the agent. This parameter corresponds to the  *ComputerSystemDisplayName*  property in the *JobManager.ini*  file.
 
-**AGENTHOSTNAME**  
+* **AGENTHOSTNAME**  
 The hostname of the agent. This parameter corresponds to the  hostname  property in the *JobManager.ini*  file and to the  *FullyQualifiedHostname * and *ResourceAdvisorUrl*  properties in the  *JobManagerGWID*  file.
 
-**POOLS**  
+* **POOLS**  
 Specify a comma-separated list of pool workstations where you want to register the agent.
 
-**RECONFIGURE\_AGENT**  
+* **RECONFIGURE\_AGENT**  
 Set to  YES  to force a refresh of all configuration options. To maintain the last configuration, set CURRENT\_AGENTID="" and RECONFIGURE\_AGENT=NO.  
 
 The **docker-compose-zcentric.yml** is to run the container as z-centric agent connected to z/OS Controller, you can edit it to set the following customizable parameter:
 
-**HTTPS**  
+* **HTTPS**  
 Set to YES to use secured version of HTTP. NO otherwise. The default value is YES.
 
 
