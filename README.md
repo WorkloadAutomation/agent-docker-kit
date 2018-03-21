@@ -78,7 +78,7 @@ The hostname of the agent. This parameter corresponds to the  hostname  property
 **POOLS**  
 Specify a comma-separated list of pool workstations where you want to register the agent.
 
-**RECONFIGURE\_AGENT**
+**RECONFIGURE\_AGENT**  
 Set to  YES  to force a refresh of all configuration options. To maintain the last configuration, set CURRENT\_AGENTID="" and RECONFIGURE\_AGENT=NO.  
 
 The **docker-compose-zcentric.yml** is to run the container as z-centric agent connected to z/OS Controller, you can edit it to set the following customizable parameter:
