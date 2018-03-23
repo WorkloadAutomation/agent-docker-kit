@@ -91,13 +91,13 @@ Specify a comma-separated list of pool workstations where you want to register t
 Set to  YES  to force a refresh of all configuration options. To maintain the last configuration, set CURRENT\_AGENTID="" and RECONFIGURE\_AGENT=NO.  
 
 Run one of the following commands to start the container:  
- ```docker-compose up -d```  
- or  
- ```
- docker run -e AGENTNAME=AGENT1 -e AGENTID=C0C04D8E238711E78E0F99F382VAA104 \
- -e SERVERHOSTNAME=ws94mdm0 \
- -e SERVERPORT=31116 -e RECONFIGURE_AGENT=NO workload-scheduler-agent:9.4.0.01
- ```
+```docker-compose up -d```  
+or
+```
+docker run -e AGENTNAME=AGENT1 -e AGENTID=C0C04D8E238711E78E0F99F382VAA104 \
+  -e SERVERHOSTNAME=ws94mdm0 \
+  -e SERVERPORT=31116 -e RECONFIGURE_AGENT=NO workload-scheduler-agent:9.4.0.01
+```
  
  To start more container instances, run the following command:  
  ```docker-compose up scale iws_agent=num_instances```  
@@ -121,14 +121,13 @@ Set to  YES  to force a refresh of all configuration options. To maintain the la
 * **HTTPS**  
 Set to YES to use secured version of HTTP. NO otherwise. The default value is YES.
 
-
  For z-centric agent, start the container, issuing:  
  ```docker-compose -f docker-compose-zcentric.yml up -d```  
-  or 
-  ```
- docker run
- AGENTNAME=AGENT1 -e AGENTID=C0C04D8E238711E78E0F99F382VAA104 \
+ or
+```
+docker run AGENTNAME=AGENT1 -e AGENTID=C0C04D8E238711E78E0F99F382VAA104 \
  -e SERVERHOSTNAME=ws94mdm0 \
  -e RECONFIGURE_AGENT=NO \
  workload-scheduler-agent:9.4.0.01
  ```
+
