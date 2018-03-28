@@ -106,8 +106,8 @@ docker run -e AGENTNAME=AGENT1 -e AGENTID=C0C04D8E238711E78E0F99F382VAA104 \
 
 The **docker-compose-zcentric.yml** is to run the container as z-centric agent connected to z/OS Controller, you can edit it to set the following customizable parameter:
 
-* **AGENTHOSTNAME**  
-The hostname of the agent. This parameter corresponds to the  hostname  property in the *JobManager.ini*  file and to the  *FullyQualifiedHostname * and *ResourceAdvisorUrl*  properties in the  *JobManagerGWID*  file.
+* **SERVERHOSTNAME**  
+The hostname of the z/OS Controller. This parameter corresponds to the  hostname  property in the *JobManager.ini*  file and to the  *FullyQualifiedHostname * and *ResourceAdvisorUrl*  properties in the  *JobManagerGWID*  file.
 
 * **AGENTID**  
 The ID of the agent.
