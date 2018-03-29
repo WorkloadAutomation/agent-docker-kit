@@ -60,74 +60,15 @@ docker tag workload-scheduler-agent:9.4.0.01 <your_registry_host>:5000/workload-
 docker push <your_registry_host>:5000/workload-scheduler-agent:9.4.0.01
 ```
 ## Run the docker container 
-The build script creates two docker-compose YAML file called **docker-compose.yml** and **docker-compose-zcentric.yml**. Optionally edit those files to specify custom runtime parameters.
+The build script creates a docker-compose YAML file called **docker-compose.yml**. 
 
-### Run the dynamic agent container
-
-The **docker-compose.yml** file is to run the container as dynamic agent connected to a distributed master and contains the following customizable parameters:
-
-* **SERVERHOSTNAME**  
-The URL of the  master domain manager. This parameter corresponds to the  ResourceAdvisorUrl  property in *theJobManagerGW.ini*  file.
-
-* **BKMSERVERHOSTNAME**  
-The name of the  backup master domain manager. This parameter corresponds to the  *BackupResourceAdvisorUrls*  property in *theJobManagerGW.ini*  file.
-
-* **SERVERPORT**  
-The port of the  master domain manager. This parameter corresponds to the  *ResourceAdvisorUrl*  and  *BackupResourceAdvisorUrls* properties in the *JobManagerGW.ini* file.
-
-* **AGENTID**  
-The ID of the agent.
-
-* **AGENTNAME**  
-The name of the agent. This parameter corresponds to the  *ComputerSystemDisplayName*  property in the *JobManager.ini*  file.
-
-* **AGENTHOSTNAME**  
-The hostname of the agent. This parameter corresponds to the  hostname  property in the *JobManager.ini*  file and to the  *FullyQualifiedHostname * and *ResourceAdvisorUrl*  properties in the  *JobManagerGWID*  file.
-
-* **POOLS**  
-Specify a comma-separated list of pool workstations where you want to register the agent.
-
-* **RECONFIGURE\_AGENT**  
-Set to  YES  to force a refresh of all configuration options. To maintain the last configuration, set CURRENT\_AGENTID="" and RECONFIGURE\_AGENT=NO.  
+To run the container edit this file to specify custom runtime parameters following the comments in the file.
 
 Run one of the following commands to start the container:  
 ```docker-compose up -d```  
-or
-```
-docker run -e AGENTNAME=AGENT1 -e AGENTID=C0C04D8E238711E78E0F99F382VAA104 \
-  -e SERVERHOSTNAME=ws94mdm0 \
-  -e SERVERPORT=31116 -e RECONFIGURE_AGENT=NO workload-scheduler-agent:9.4.0.01
-```
+or to run the container without docker-compose  
+```docker run -e AGENTNAME=AGENT1 -e SERVERHOSTNAME=ws94mdm0 -e SERVERPORT=31116 workload-scheduler-agent:9.4.0.01```  
  
- To start more container instances, run the following command:  
- ```docker-compose up scale iws_agent=num_instances```  
-
-### Run the z-centric container
-
-The **docker-compose-zcentric.yml** is to run the container as z-centric agent connected to z/OS Controller, you can edit it to set the following customizable parameter:
-
-* **SERVERHOSTNAME**  
-The hostname of the z/OS Controller. This parameter corresponds to the  hostname  property in the *JobManager.ini*  file and to the  *FullyQualifiedHostname * and *ResourceAdvisorUrl*  properties in the  *JobManagerGWID*  file.
-
-* **AGENTID**  
-The ID of the agent.
-
- * **AGENTNAME**  
-The name of the agent. This parameter corresponds to the  *ComputerSystemDisplayName*  property in the *JobManager.ini*  file.
-
-* **RECONFIGURE\_AGENT**  
-Set to  YES  to force a refresh of all configuration options. To maintain the last configuration, set CURRENT\_AGENTID="" and RECONFIGURE\_AGENT=NO. 
-
-* **HTTPS**  
-Set to YES to use secured version of HTTP. NO otherwise. The default value is YES.
-
- For z-centric agent, start the container, issuing:  
- ```docker-compose -f docker-compose-zcentric.yml up -d```  
- or
-```
-docker run AGENTNAME=AGENT1 -e AGENTID=C0C04D8E238711E78E0F99F382VAA104 \
- -e SERVERHOSTNAME=ws94mdm0 \
- -e RECONFIGURE_AGENT=NO \
- workload-scheduler-agent:9.4.0.01
- ```
+To start more container instances, run the following command:  
+```docker-compose up scale iws_agent=num_instances```  
 
