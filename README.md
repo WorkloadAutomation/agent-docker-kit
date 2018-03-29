@@ -35,8 +35,10 @@ Run **build-docker-sh** to build the container. This script wraps the docker bui
  **\[-t,--imgname  image name\]**  
  Optionally specifies the name of the image to be built. The default value is  **workload-scheduler-agent**.
 
-To build a new image run the following command:  
-```./build-docker.sh -z <agent_zip_full_path>/TWS94FP1_LNX_X86_64_AGENT.zip```
+To build a new image run the following command:
+```
+./build-docker.sh -z <agent_zip_full_path>/TWS94FP1_LNX_X86_64_AGENT.zip
+```
 
 To see the image just built run the following command:
 ```docker image```  
