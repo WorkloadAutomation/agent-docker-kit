@@ -66,9 +66,11 @@ To run the container edit this file to specify custom runtime parameters followi
 
 Run one of the following commands to start the container:  
 ```docker-compose up -d```  
-or to run the container without docker-compose  
-```docker run -e AGENTNAME=AGENT1 -e SERVERHOSTNAME=ws94mdm0 -e SERVERPORT=31116 workload-scheduler-agent:9.4.0.01```  
  
 To start more container instances, run the following command:  
 ```docker-compose up scale iws_agent=num_instances```  
 
+To run the container for dynamic agent without docker-compose, use docker command specifying the configuration with environment variables  
+```docker run -e AGENTNAME=AGENT1 -e SERVERHOSTNAME=ws94mdm0 -e SERVERPORT=31116 workload-scheduler-agent:9.4.0.01```  
+or for zCentric
+```docker run -p 31114:31114 -e HTTPS=YES workload-scheduler-agent:9.4.0.01```  
