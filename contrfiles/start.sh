@@ -213,6 +213,7 @@ reconfigure_agent (){
             $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini BackupResourceAdvisorUrls  "https://${BKMSERVERHOSTNAME}:${SERVERPORT}/JobManagerRESTWeb/JobScheduler/resource"
         fi
     else
+		# zCentric
         $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini autostart no
         $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManager.ini ResourceAdvisorUrl https://localhost:0/ita/JobManagerGW/JobManagerRESTWeb/JobScheduler/resource
         $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini JobManagerGWURIs https://localhost:31114/ita/JobManagerGW/JobManagerRESTWeb/JobScheduler/resource
