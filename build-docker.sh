@@ -148,6 +148,7 @@ iws_agent:
 
  restart: always
  environment:
+#  - LICENSE=ACCEPT
   - SERVERHOSTNAME=$SERVERHOSTNAME
   - SERVERPORT=$SERVERPORT
   - AGENTNAME=WSAGENT99

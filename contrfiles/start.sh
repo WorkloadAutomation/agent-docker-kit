@@ -1,12 +1,12 @@
 #!/bin/bash
 ####################################################################
-# Licensed Materials –Property of HCL*
+# Licensed Materials - Property of HCL*
 # 
-# (c) Copyright HCL Technologies Ltd. 2017 All rights reserved.
+# (c) Copyright HCL Technologies Ltd. 2017-2018 All rights reserved.
 # * Trademark of HCL Technologies Limited
 ####################################################################
 #
-# Entry point script for the Docker Workload Scheduler Agent 
+# Entry point script for the Docker Workload Automation Agent 
 #
 ####################################################################
 
@@ -22,13 +22,26 @@
 # AGENTHOSTNAME=myhost.example.com         # hostname in JobManager.ini and JobManagerGWID FullyQualifiedHostname and ResourceAdvisorUrl 
 # RECONFIGURE_AGENT=NO                     # Set to YES to force refresh of all configuration options, must set CURRENT_AGENTID="${AGENTID}" and RECONFIGURE_AGENT=NO to keep last configuration
 # POOLS                                    # Pass a comma separated list of Workstation POOLS where you want to register this agent ex.:POOLS="Po1,Po2"
+# MAXWAITONEXIT                            # The timeout in seconds to wait for all the processes to complete before stopping the container. Default value: 60. Maximum allowed value: 3600
+# SECRETMOUNTPATH=/opt/service-bind        # Pass the secret mount point, default: /opt/service-bind
 # HTTPS=YES                                # For z-Centric only. Set to NO to force HTTP, not secured protocol, for the agent local port used to receive job submission from Controller
+# LICENSE=ACCEPT                           # Use ACCEPT to accept the license agreement
 # Set some defaults
-AGUSER=wauser
+AGENT_PROC="agent"
+JOBMANAGER_PROC="JobManager"
+TASKLAUNCHER_PROC="taskLauncher"
+
+WA_USER=wauser
 AGENTHOSTNAME=${AGENTHOSTNAME:-localhost}
-INSTALL_DIR=${INSTALL_DIR:-/home/${AGUSER}/TWA/TWS}
-SERVERPORT=${SERVERPORT:-31116}
+INSTALL_DIR=${INSTALL_DIR:-/home/${WA_USER}/TWA/TWS}
+BMFILE=${INSTALL_DIR}/.bluemix
+if [ -f ${BMFILE} ];then
+	SERVERPORT=${SERVERPORT:-443}
+else
+	SERVERPORT=${SERVERPORT:-31116}
+fi
 POOL_FILE=$INSTALL_DIR/ITA/cpa/config/pools.properties
+SECRETMOUNTPATH=${SECRETMOUNTPATH:-/opt/service-bind}
 
 #
 # These variables are overwritten in the setup script
@@ -36,11 +49,18 @@ POOL_FILE=$INSTALL_DIR/ITA/cpa/config/pools.properties
 ACTION_TOOL_RET_COD=0
 ACTION_TOOL_RET_STDOUT=
 CONFIGURATIONFILESDIR=$INSTALL_DIR/stdlist
-OUTPUT_FILE=properties_agent.zip
+OUTPUT_FILE=/tmp/properties_agent.zip
 PROPERTYFILENAME=installAgent.properties
 PROPERTYFILE=$CONFIGURATIONFILESDIR/$PROPERTYFILENAME
 GWID=GWID_${AGENTNAME}_${HOSTNAME}
+GWID=`echo ${GWID//-/_}`
 
+if [ -d /home/${WA_USER}/cert  ];then
+    echo Custom certificates found
+	CERTDIR=/home/${WA_USER}/cert
+else
+	CERTDIR=$CONFIGURATIONFILESDIR
+fi	
 
 #
 #  BM specific variables
@@ -74,7 +94,7 @@ decodeUser_Password(){
     echo Decoding user and password
     USER_DECODE=$(printf '%b' "${CURRENT_USER//%/\\x}")
     PASSWORD_DECODE=$(printf '%b' "${CURRENT_PASSWORD//%/\\x}")
-    echo $USER_DECODE $PASSWORD_DECODE
+    echo $USER_DECODE xxxxxxxxxxxx
 }
 
 
@@ -95,18 +115,20 @@ execute_command()
 # Method to check if the environment variables are correctly set
 checkEnvironmentVariables(){
 
-    if [ ! -z "$CURRENT_USER" ]
-        then
-            ACTION_TOOL_RET_COD=1
-            ACTION_TOOL_RET_STDOUT="CURRENT_USER is not correctly set."
-        else echo "CURRENT_USER: $CURRENT_USER"
+    if [ -z "$CURRENT_USER" ]
+	then
+		ACTION_TOOL_RET_COD=1
+		ACTION_TOOL_RET_STDOUT="CURRENT_USER is not correctly set."
+	else 
+		echo "CURRENT_USER: $CURRENT_USER"
     fi
 
-    if [ ! -z "$CURRENT_PASSWORD" ]
-        then
-            ACTION_TOOL_RET_COD=1
-            ACTION_TOOL_RET_STDOUT="CURRENT_PASSWORD is not correctly set."
-        else echo "CURRENT_PASSWORD: $CURRENT_PASSWORD"
+    if [ -z "$CURRENT_PASSWORD" ]
+	then
+		ACTION_TOOL_RET_COD=1
+		ACTION_TOOL_RET_STDOUT="CURRENT_PASSWORD is not correctly set."
+	else
+		echo "CURRENT_PASSWORD: xxxxxxxxxxxxxxxx"
     fi
     exitOnError
 }
@@ -114,77 +136,116 @@ checkEnvironmentVariables(){
 
 # Method to get properties and certificates from URI
 getPropertiesFromZip(){
-    echo "Running getPropertiesFromZip"
-    checkEnvironmentVariables
-    decodeUser_Password
-    cd /tmp
     # Download the property file and certificates from URI and copy file into the stdlist folder
     if [ ! -z "$URI" ]
     then
+	    echo "Running getPropertiesFromZip"
+	    checkEnvironmentVariables
+	    decodeUser_Password
+	    cd /tmp
         curl -v --tlsv1.2 --user "$USER_DECODE:$PASSWORD_DECODE" --output $OUTPUT_FILE $URI
         unzip $OUTPUT_FILE
+        if [ $? -ne 0 ]
+        then
+        	ACTION_TOOL_RET_COD=2
+			ACTION_TOOL_RET_STDOUT="Unable to download property file and certificates from URI $URI."
+		    exitOnError
+        fi
         echo "Copying ./$ZIP_INNER_FOLDER/$PROPERTYFILENAME to $PROPERTYFILE"
         cp -f ./$ZIP_INNER_FOLDER/$PROPERTYFILENAME $PROPERTYFILE
         chmod 755 $PROPERTYFILE
         chown wauser:wauser $PROPERTYFILE
-        echo "Copying ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb to $CONFIGURATIONFILESDIR/TWSClientKeyStore.kdb"
-        cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb $CONFIGURATIONFILESDIR/TWSClientKeyStore.kdb
-        chmod 755  $CONFIGURATIONFILESDIR/TWSClientKeyStore.kdb
-        chown wauser:wauser $CONFIGURATIONFILESDIR/TWSClientKeyStore.kdb
+        echo "Copying ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb to $CERTDIR/TWSClientKeyStore.kdb"
+        cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb $CERTDIR/TWSClientKeyStore.kdb
+        chmod 755  $CERTDIR/TWSClientKeyStore.kdb
+        chown wauser:wauser $CERTDIR/TWSClientKeyStore.kdb
         if [ -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth ];
         then
-            echo "Copying ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth to $CONFIGURATIONFILESDIR/TWSClientKeyStore.sth"
-            cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth $CONFIGURATIONFILESDIR/TWSClientKeyStore.sth
-            chmod 755 $CONFIGURATIONFILESDIR/TWSClientKeyStore.sth
-            chown wauser:wauser $CONFIGURATIONFILESDIR/TWSClientKeyStore.sth
+            echo "Copying ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth to $CERTDIR/TWSClientKeyStore.sth"
+            cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth $CERTDIR/TWSClientKeyStore.sth
+            chmod 755 $CERTDIR/TWSClientKeyStore.sth
+            chown wauser:wauser $CERTDIR/TWSClientKeyStore.sth
         fi
+        if [ -f $OUTPUT_FILE ]
+        then
+        	rm -f $OUTPUT_FILE
+        fi
+        if [ -d $ZIP_INNER_FOLDER ]
+        then
+	        rm -Rf $ZIP_INNER_FOLDER
+	    fi
+        if [ -d /tmp/.self ]
+        then
+	        rm -Rf /tmp/.self
+	    fi
+    else
+        echo "No download server information provided."
     fi
 }
 
 # Method to get certificates from URI
 getKeyStoreFromZip(){
-    echo "Running getKeyStoreFromZip"
-    checkEnvironmentVariables
-    decodeUser_Password
     cd /tmp
     # Download the property file and certificates from URI and copy file into the stdlist folder
     if [ ! -z "$URI" ]
     then
+	    echo "Running getKeyStoreFromZip"
+	    checkEnvironmentVariables
+	    decodeUser_Password
         curl -v --tlsv1.2 --user "$USER_DECODE:$PASSWORD_DECODE" --output $OUTPUT_FILE $URI
         unzip $OUTPUT_FILE
-        echo "Running command: cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb $CONFIGURATIONFILESDIR/TWSClientKeyStore.kdb"
-        cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb $CONFIGURATIONFILESDIR/TWSClientKeyStore.kdb
-        chmod 755  $CONFIGURATIONFILESDIR/TWSClientKeyStore.kdb
-        chown wauser:wauser $CONFIGURATIONFILESDIR/TWSClientKeyStore.kdb
+        if [ $? -ne 0 ]
+        then
+        	ACTION_TOOL_RET_COD=2
+			ACTION_TOOL_RET_STDOUT="Unable to download property file and certificates from URI $URI."
+		    exitOnError
+        fi
+        echo "Running command: cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb $CERTDIR/TWSClientKeyStore.kdb"
+        cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb $CERTDIR/TWSClientKeyStore.kdb
+        chmod 755  $CERTDIR/TWSClientKeyStore.kdb
+        chown wauser:wauser $CERTDIR/TWSClientKeyStore.kdb
     else
         echo "No download server information provided."
     fi
     if [ -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth ];
     then
-        cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth $CONFIGURATIONFILESDIR/TWSClientKeyStore.sth
-        chmod 755 $CONFIGURATIONFILESDIR/TWSClientKeyStore.sth
-        chown wauser:wauser $CONFIGURATIONFILESDIR/TWSClientKeyStore.sth
+        cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth $CERTDIR/TWSClientKeyStore.sth
+        chmod 755 $CERTDIR/TWSClientKeyStore.sth
+        chown wauser:wauser $CERTDIR/TWSClientKeyStore.sth
+    fi
+    if [ -f $OUTPUT_FILE ]
+    then
+    	rm -f $OUTPUT_FILE
+    fi
+    if [ -d $ZIP_INNER_FOLDER ]
+    then
+        rm -Rf $ZIP_INNER_FOLDER
+    fi
+    if [ -d /tmp/.self ]
+    then
+        rm -Rf /tmp/.self
     fi
 }
 
 copy_certs (){
 #Copy Certificate
-    if [ -f $CONFIGURATIONFILESDIR/TWSClientKeyStore.kdb ]
+    if [ -f $CERTDIR/TWSClientKeyStore.kdb ]
     then
-        echo "Copying certificate TWSClientKeyStore.kdb"
-        cp -f $CONFIGURATIONFILESDIR/TWSClientKeyStore.kdb $INSTALL_DIR/ITA/cpa/ita/cert/
+        echo "Copying custom certificate kes TWSClientKeyStore.kdb"
+        cp -f $CERTDIR/TWSClientKeyStore.kdb $INSTALL_DIR/ITA/cpa/ita/cert/
         chmod 755  $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.kdb 
         chown wauser:wauser  $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.kdb
     else
-        echo "Certificate TWSClientKeyStore.kdb not present."
+        echo "Custom key store TWSClientKeyStore.kdb not present."
     fi
-    if [ -f $CONFIGURATIONFILESDIR/TWSClientKeyStore.sth ]
+    if [ -f $CERTDIR/TWSClientKeyStore.sth ]
     then
-        echo "Configuring the TWSClientKeyStore.sth key store"
-        cp -f $CONFIGURATIONFILESDIR/TWSClientKeyStore.sth $INSTALL_DIR/ITA/cpa/ita/cert/
+    echo "Copying stash file TWSClientKeyStore.sth"
+        cp -f $CERTDIR/TWSClientKeyStore.sth $INSTALL_DIR/ITA/cpa/ita/cert/
         chmod 755 $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.sth
         chown wauser:wauser $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.sth
-        execute_command "$cmd -updateProperty $INSTALL_DIR/ITA/cpa/ita/ita.ini cert_label saasclient"
+    else
+    	echo "Custom stash file TWSClientKeyStore.sth not present."
     fi
 }
 
@@ -207,6 +268,7 @@ reconfigure_agent (){
         $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini autostart yes
         $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManager.ini ResourceAdvisorUrl https://localhost:31114/ita/JobManagerGW/JobManagerRESTWeb/JobScheduler/resource
         $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini ResourceAdvisorUrl https://${SERVERHOSTNAME}:${SERVERPORT}/JobManagerRESTWeb/JobScheduler/resource
+        $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini JobManagerGWURIs https://localhost:31114/ita/JobManagerGW/JobManagerRESTWeb/JobScheduler/resource
         if [ ! -z "$BKMSERVERHOSTNAME" ]
             then
             echo "Setting backup server name = ${BKMSERVERHOSTNAME}"
@@ -218,7 +280,7 @@ reconfigure_agent (){
         $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManager.ini ResourceAdvisorUrl https://localhost:0/ita/JobManagerGW/JobManagerRESTWeb/JobScheduler/resource
         $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManagerGW.ini JobManagerGWURIs https://localhost:31114/ita/JobManagerGW/JobManagerRESTWeb/JobScheduler/resource
         
-        if [ "$HTTPS" -eq "NO" ]
+        if [ "x$HTTPS" == "xNO" ]
         then
             $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/ita/ita.ini tcp_port 31114
             $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/ita/ita.ini ssl_port 0
@@ -231,7 +293,11 @@ reconfigure_agent (){
             then
             AGENTNAME=$ComputerSystemDisplayName
         else
-            AGENTNAME=AGTDFT
+			if [ -f ${BMFILE} ];then
+				AGENTNAME=AGT4BM
+			else
+				AGENTNAME=AGTDFT
+			fi
         fi
     fi
     echo "Setting agent display name to ${AGENTNAME}"
@@ -298,6 +364,13 @@ createPropertyFile () {
         echo AGENTHOSTNAME=$AGENTHOSTNAME >> $PROPERTYFILE
     fi
     
+    if [ ! -z "$LICENSE" ]
+    then
+        echo LICENSE=$LICENSE >> $PROPERTYFILE
+    fi
+    
+	chown wauser:wauser $PROPERTYFILE
+	chmod 755 $PROPERTYFILE
 }
 
 create_pool() {
@@ -311,6 +384,7 @@ create_pool() {
 }
 
 display_properties(){
+	echo "LICENSE=$LICENSE"
     echo "CURRENT_AGENTID=$CURRENT_AGENTID"
     echo "RECONFIGURE_AGENT=$RECONFIGURE_AGENT"
     echo "SERVERHOSTNAME=$SERVERHOSTNAME"
@@ -319,6 +393,7 @@ display_properties(){
     echo "AGENTID=$AGENTID"
     echo "AGENTNAME=$AGENTNAME"
     echo "AGENTHOSTNAME=$AGENTHOSTNAME"
+    echo "MAXWAITONEXIT=$MAXWAITONEXIT"
 }
 
 retrieve_properties(){
@@ -345,6 +420,7 @@ retrieve_properties(){
             reconfigure_agent
         else
             echo "Configuring from environment variables..."
+            copy_certs
             createPropertyFile
             reconfigure_agent
         fi
@@ -379,11 +455,133 @@ exit_gracefully() {
     # stop the agent
     echo "Caught kill signal. Shutting down agent"
     $INSTALL_DIR/ShutDownLwa
+    # wait for completion of all the jobs
+	wait_for_jobs_completion
 }
 
+count_running_procs()
+{	
+	PROC_NAME=$1
+	PROC_COUNT=0
+	if [ ! -z ${PROC_NAME} ];then
+		PROC_COUNT=$(pidof ${PROC_NAME} | wc -w)
+	fi
+	return ${PROC_COUNT}
+}
+
+count_running_jobs()
+{
+	PREVIOUS_JOBS=$1
+  	count_running_procs ${TASKLAUNCHER_PROC}
+  	CURRENT_JOBS=$?
+    CDATE=`date -u +"%Y-%m-%d %H:%M:%S"`
+    [ ${CURRENT_JOBS} -ne ${PREVIOUS_JOBS} ] && echo "${CDATE} ${CURRENT_JOBS} jobs running." 
+	return ${CURRENT_JOBS}
+}
+
+wait_for_jobs_completion() {
+	START_TIME=$(date +%s)
+	ELAPSED=0
+	CLEAN_SHUTDOWN=1
+	while [ ${ELAPSED} -le ${MAXWAITONEXIT} ];do
+		get_jobs
+		if [ $? -eq 0 ]
+		then
+			CLEAN_SHUTDOWN=0
+			ELAPSED=`expr ${MAXWAITONEXIT} + 1`
+		else
+			CURR_TIME=$(date +%s)
+			ELAPSED=$((CURR_TIME - START_TIME))
+			sleep 5
+		fi
+	done
+	if [ ${CLEAN_SHUTDOWN} -eq 1 ]
+	then
+		echo "Timeout expired; agent processes are still running and will be killed!"
+	fi
+}
+
+get_jobs()
+{
+	PROCESSES=0
+	count_running_procs ${TASKLAUNCHER_PROC}
+	TASKLAUNCHER_COUNT=$?
+	if [ ${TASKLAUNCHER_COUNT} -gt 0 ];then
+		PROCESSES=`expr ${PROCESSES} + ${TASKLAUNCHER_COUNT}`
+		echo "${TASKLAUNCHER_COUNT} \"${TASKLAUNCHER_PROC}\" processes are running; waiting for shutdown..."
+	else
+		count_running_procs ${JOBMANAGER_PROC}
+		JOBMANAGER_COUNT=$?
+		if [ ${JOBMANAGER_COUNT} -gt 0 ];then
+		   	PROCESSES=`expr ${PROCESSES} + ${JOBMANAGER_COUNT}`
+			echo "${JOBMANAGER_PROC} process is running; waiting for shutdown..."
+		fi
+	fi
+	return ${PROCESSES}
+}
+
+check_license() {
+	LICENSE_VAR=`echo ${LICENSE}|tr "[:lower:]" "[:upper:]"`
+	if [ "$LICENSE_VAR" != "ACCEPT" ]
+    then
+        echo "License agreement not accepted. Add LICENSE=ACCEPT parameter to accept the license agreement."
+        exit -66
+    fi
+}    
+    
 rm -rf /tmp/*
-# modify stdlist access rights for bluemix
-chmod 777 $CONFIGURATIONFILESDIR
+
+#Check if passed value contains a valid number
+if [ -z "${MAXWAITONEXIT##*[!0-9]*}" ]
+then
+	echo "Wrong value for MAXWAITONEXIT: \"${MAXWAITONEXIT}\". Expected integer number."
+	MAXWAITONEXIT=60
+else
+	if [ ${MAXWAITONEXIT} -gt 3600 ]
+	then
+		echo "Wrong value for MAXWAITONEXIT: \"${MAXWAITONEXIT}\". Maximum allowed value is 3600."
+		${MAXWAITONEXIT}=3600
+	fi
+fi
+
+# Check if we are in the new BM Kube env
+if [ -z "$URI" ]
+then
+	if [ -f "$SECRETMOUNTPATH/binding" ]
+	then
+		echo "Using $SECRETMOUNTPATH/binding secret."
+	   URI=$(jq -r '.agent_config_url' $SECRETMOUNTPATH/binding)
+	   CURRENT_PASSWORD=$(jq -r '.password' $SECRETMOUNTPATH/binding)
+	   CURRENT_USER=$(jq -r '.userId' $SECRETMOUNTPATH/binding)
+	else
+		if [ -f "$SECRETMOUNTPATH/agent_config_url" ]
+		then
+			echo "Using $SECRETMOUNTPATH/agent_config_url secret."
+			URI=`cat ${SECRETMOUNTPATH}/agent_config_url`
+		fi
+		if [ -f "$SECRETMOUNTPATH/password" ]
+		then
+			echo "Using $SECRETMOUNTPATH/password secret."
+			CURRENT_PASSWORD=`cat ${SECRETMOUNTPATH}/password`
+		fi
+		if [ -f "$SECRETMOUNTPATH/userId" ]
+		then
+			echo "Using $SECRETMOUNTPATH/userId secret."
+			CURRENT_USER=`cat ${SECRETMOUNTPATH}/userId`
+		fi
+	fi
+fi
+
+#this section has been commented because now the container runs as no-root, so these changes get permission denied error
+if [ ! -f ${BMFILE} ];then
+	check_license
+#	chown ${WA_USER}:${WA_USER} $CONFIGURATIONFILESDIR
+#	chmod 755 $CONFIGURATIONFILESDIR
+#else
+#	# modify stdlist access rights for bluemix
+#	chmod 777 $CONFIGURATIONFILESDIR
+fi
+
 retrieve_properties
 display_properties
 create_pool
@@ -395,18 +593,14 @@ $INSTALL_DIR/StartUpLwa
 sleep 30
 store_agent_ID
 # infinite loop for the agent
-taskCount0=999
-agentPID=$(pidof agent)
+runningJobs=9999
+agentPID=$(pidof ${AGENT_PROC})
 while [ ! -z "$agentPID" ]
   do
-    taskCount=$(pidof taskLauncher | wc -w)
-    CDATE=`date -u +"%Y-%m-%d %H:%M:%S"`
-    [ $taskCount -ne $taskCount0 ] && echo "$CDATE $taskCount jobs running." 
+	count_running_jobs ${runningJobs}
+	runningJobs=$?
     sleep 30
-    taskCount0=$taskCount
-    agentPID=$(pidof agent)
+    agentPID=$(pidof ${AGENT_PROC})
   done
 RC=$?
 exit $RC
-
-

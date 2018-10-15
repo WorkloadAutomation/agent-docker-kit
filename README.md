@@ -78,7 +78,7 @@ docker-compose up scale iws_agent=num_instances
 
 To run the container for dynamic agent without docker-compose, use docker command specifying the configuration with environment variables
 ```
-docker run -e AGENTNAME=AGENT1 -e SERVERHOSTNAME=ws94mdm0 -e SERVERPORT=31116 workload-scheduler-agent:9.4.0.01
+docker run -e AGENTNAME=AGENT1 -e SERVERHOSTNAME=ws94mdm0 -e SERVERPORT=31116 -e LICENSE=ACCEPT -v iws_agent-data:/home/wauser/TWA/TWS/stdlist workload-scheduler-agent:9.4.0.01
 ```
 or for zCentric
 ```
