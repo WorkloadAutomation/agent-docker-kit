@@ -30,7 +30,7 @@ Run **build-docker-sh** to build the container. This script wraps the docker bui
  Specifies the HTTPS port of the temporary nginx server.
 
  **\[-v,--agver  agent version\]**  
- Optionally specifies the version of the agent to be used to tag the Docker image. The default value is  9.4.0.01.
+ Optionally specifies the version of the agent to be used to tag the Docker image. The default value is  9.4.0.04.
 
  **\[-t,--imgname  image name\]**  
  Optionally specifies the name of the image to be built. The default value is  **workload-scheduler-agent**.
@@ -46,20 +46,20 @@ To see the image just built run the following command:
 The command output is similar to the following:  
 ```
 REPOSITORY          TAG        IMAGE ID         CREATED            SIZE
-workload-scheduler-agent  9.4.0.01    af42b367cb55    About an hour ago    815.5 MB
+workload-scheduler-agent  9.4.0.04    af42b367cb55    About an hour ago    815.5 MB
 ```
 
 ## Deploy the created image in another envrironment
 To Export and import the created image run the following commands:
 ```
-docker save -o <your_path>/workload-scheduler-agent.tar workload-scheduler-agent:9.4.0.01
+docker save -o <your_path>/workload-scheduler-agent.tar workload-scheduler-agent:9.4.0.04
 #copy the saved image to a new environment
 docker load -i <your_path>/workload-scheduler-agent.tar
 ```
 To push the created image to the desired private environment registry run the following command:
 ```
-docker tag workload-scheduler-agent:9.4.0.01 <your_registry_host>:5000/workload-scheduler-agent:9.4.0.01
-docker push <your_registry_host>:5000/workload-scheduler-agent:9.4.0.01
+docker tag workload-scheduler-agent:9.4.0.04 <your_registry_host>:5000/workload-scheduler-agent:9.4.0.04
+docker push <your_registry_host>:5000/workload-scheduler-agent:9.4.0.04
 ```
 ## Run the docker container 
 The build script creates a docker-compose YAML file called **docker-compose.yml**. 
@@ -78,9 +78,9 @@ docker-compose up scale iws_agent=num_instances
 
 To run the container for dynamic agent without docker-compose, use docker command specifying the configuration with environment variables
 ```
-docker run -e AGENTNAME=AGENT1 -e SERVERHOSTNAME=ws94mdm0 -e SERVERPORT=31116 -e LICENSE=ACCEPT -v iws_agent-data:/home/wauser/TWA/TWS/stdlist workload-scheduler-agent:9.4.0.01
+docker run -e AGENTNAME=AGENT1 -e SERVERHOSTNAME=ws94mdm0 -e SERVERPORT=31116 -e LICENSE=ACCEPT -v iws_agent-data:/home/wauser/TWA/TWS/stdlist workload-scheduler-agent:9.4.0.04
 ```
 or for zCentric
 ```
-docker run -p 31114:31114 -e HTTPS=YES workload-scheduler-agent:9.4.0.01
+docker run -p 31114:31114 -e HTTPS=YES workload-scheduler-agent:9.4.0.04
 ```

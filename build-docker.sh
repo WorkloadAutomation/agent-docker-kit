@@ -19,7 +19,7 @@ OPTIONS:
    -h                              Show this message
    -z,--zipfile                    The .zip file of the image for the agent installation
    -p,--port                       Optionally specify the HTTP port of the temporary nginx server.
-   [-v,--agver <agent version>]    Optionally specify the version of the agent to be used to TAG the Docker image (default: 9.4.0.03)
+   [-v,--agver <agent version>]    Optionally specify the version of the agent to be used to TAG the Docker image (default: 9.4.0.04)
    [-t,--imgname <image name>]     Optionally specify the name of the image you will build (default: workload-scheduler-agent)
 EOF
 }
@@ -61,7 +61,7 @@ fi
 
 if [[ -z $AGVER ]]
 then
-    AGVER=9.4.0.03
+    AGVER=9.4.0.04
 fi
 
 if [[ -z $IMGNAME ]]
