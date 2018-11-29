@@ -10,6 +10,28 @@
 #
 ####################################################################
 
+if [ "x${WA_DEBUG_SCRIPTS}" == "xYES" ];then
+	set -x
+fi
+
+# Support Arbitrary uid
+MYUID=$(id -u)
+MYGID=$(id -g)
+
+if ! whoami &> /dev/null; then
+  if [ -w /etc/passwd ]; then
+    echo "Replacing wauser to $MYUID:$MYGID"
+    sed "s/999:999/$MYUID:$MYGID/g" /etc/passwd > /tmp/passwd
+    cp /tmp/passwd /etc/passwd
+    rm /tmp/passwd
+  fi
+fi
+
+mychown() {
+  if [ $MYUID -eq 0 ]; then
+    chown $*
+  fi
+}
 
 #
 # Set these variables in "docker run" to configure the agent to use your own TDWB server and agents
@@ -153,18 +175,18 @@ getPropertiesFromZip(){
         fi
         echo "Copying ./$ZIP_INNER_FOLDER/$PROPERTYFILENAME to $PROPERTYFILE"
         cp -f ./$ZIP_INNER_FOLDER/$PROPERTYFILENAME $PROPERTYFILE
-        chmod 755 $PROPERTYFILE
-        chown wauser:wauser $PROPERTYFILE
+        chmod 775 $PROPERTYFILE
+        mychown wauser:wauser $PROPERTYFILE
         echo "Copying ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb to $CERTDIR/TWSClientKeyStore.kdb"
         cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb $CERTDIR/TWSClientKeyStore.kdb
-        chmod 755  $CERTDIR/TWSClientKeyStore.kdb
-        chown wauser:wauser $CERTDIR/TWSClientKeyStore.kdb
+        chmod 775  $CERTDIR/TWSClientKeyStore.kdb
+        mychown wauser:wauser $CERTDIR/TWSClientKeyStore.kdb
         if [ -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth ];
         then
             echo "Copying ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth to $CERTDIR/TWSClientKeyStore.sth"
             cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth $CERTDIR/TWSClientKeyStore.sth
-            chmod 755 $CERTDIR/TWSClientKeyStore.sth
-            chown wauser:wauser $CERTDIR/TWSClientKeyStore.sth
+            chmod 775 $CERTDIR/TWSClientKeyStore.sth
+            mychown wauser:wauser $CERTDIR/TWSClientKeyStore.sth
         fi
         if [ -f $OUTPUT_FILE ]
         then
@@ -202,16 +224,16 @@ getKeyStoreFromZip(){
         fi
         echo "Running command: cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb $CERTDIR/TWSClientKeyStore.kdb"
         cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.kdb $CERTDIR/TWSClientKeyStore.kdb
-        chmod 755  $CERTDIR/TWSClientKeyStore.kdb
-        chown wauser:wauser $CERTDIR/TWSClientKeyStore.kdb
+        chmod 775  $CERTDIR/TWSClientKeyStore.kdb
+        mychown wauser:wauser $CERTDIR/TWSClientKeyStore.kdb
     else
         echo "No download server information provided."
     fi
     if [ -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth ];
     then
         cp -f ./$ZIP_INNER_FOLDER/TWSClientKeyStore.sth $CERTDIR/TWSClientKeyStore.sth
-        chmod 755 $CERTDIR/TWSClientKeyStore.sth
-        chown wauser:wauser $CERTDIR/TWSClientKeyStore.sth
+        chmod 775 $CERTDIR/TWSClientKeyStore.sth
+        mychown wauser:wauser $CERTDIR/TWSClientKeyStore.sth
     fi
     if [ -f $OUTPUT_FILE ]
     then
@@ -233,8 +255,8 @@ copy_certs (){
     then
         echo "Copying custom certificate kes TWSClientKeyStore.kdb"
         cp -f $CERTDIR/TWSClientKeyStore.kdb $INSTALL_DIR/ITA/cpa/ita/cert/
-        chmod 755  $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.kdb 
-        chown wauser:wauser  $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.kdb
+        chmod 775  $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.kdb 
+        mychown wauser:wauser  $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.kdb
     else
         echo "Custom key store TWSClientKeyStore.kdb not present."
     fi
@@ -242,8 +264,8 @@ copy_certs (){
     then
     echo "Copying stash file TWSClientKeyStore.sth"
         cp -f $CERTDIR/TWSClientKeyStore.sth $INSTALL_DIR/ITA/cpa/ita/cert/
-        chmod 755 $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.sth
-        chown wauser:wauser $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.sth
+        chmod 775 $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.sth
+        mychown wauser:wauser $INSTALL_DIR/ITA/cpa/ita/cert/TWSClientKeyStore.sth
     else
     	echo "Custom stash file TWSClientKeyStore.sth not present."
     fi
@@ -255,6 +277,8 @@ reconfigure_agent (){
     COMMAND_DIR="$IMAGESDIR/ACTIONTOOLS/TWSupdate_file"
     cmd="$COMMAND_DIR "
 
+    ls -l $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file
+    ls -l $INSTALL_DIR/ITA/cpa/config/JobManager*.ini
     # Update hostname
     echo "Setting hostname = ${AGENTHOSTNAME} in JobManager.ini and JobManagerGWID"
     $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManager.ini FullyQualifiedHostname ${AGENTHOSTNAME}
@@ -326,6 +350,11 @@ reconfigure_agent (){
         echo "Agent ID not specified. Agent will create a new ID."
         $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -delRow $INSTALL_DIR/ITA/cpa/config/JobManager.ini AgentID
     fi
+
+    if [ $MYGID -eq 0 ]; then
+      $INSTALL_DIR/_uninstall/ACTIONTOOLS/TWSupdate_file -updateProperty $INSTALL_DIR/ITA/cpa/config/JobManager.ini AllowRoot true
+    fi
+
 }
 
 set_properties_from_environment ()
@@ -369,8 +398,8 @@ createPropertyFile () {
         echo LICENSE=$LICENSE >> $PROPERTYFILE
     fi
     
-	chown wauser:wauser $PROPERTYFILE
-	chmod 755 $PROPERTYFILE
+	mychown wauser:wauser $PROPERTYFILE
+	chmod 775 $PROPERTYFILE
 }
 
 create_pool() {
@@ -575,8 +604,8 @@ fi
 #this section has been commented because now the container runs as no-root, so these changes get permission denied error
 if [ ! -f ${BMFILE} ];then
 	check_license
-#	chown ${WA_USER}:${WA_USER} $CONFIGURATIONFILESDIR
-#	chmod 755 $CONFIGURATIONFILESDIR
+#	mychown ${WA_USER}:${WA_USER} $CONFIGURATIONFILESDIR
+#	chmod 775 $CONFIGURATIONFILESDIR
 #else
 #	# modify stdlist access rights for bluemix
 #	chmod 777 $CONFIGURATIONFILESDIR

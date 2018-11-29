@@ -24,7 +24,7 @@ COPY contrfiles/common-password /etc/pam.d/common-password
 RUN echo "Installing useful packages" \
 && apt-get update \
 && apt-get -y dist-upgrade \
-&& apt-get install wget unzip vim net-tools bc curl libcurl3 libcurl3-dev --assume-yes \
+&& apt-get install wget unzip vim net-tools bc curl libcurl3 libcurl3-dev iputils-ping dnsutils --assume-yes \
 && apt-get clean \
 && rm -rf /var/lib/apt/lists/*
 
@@ -60,13 +60,19 @@ RUN echo "Installing agent" \
 && su - wauser -c  '/tmp/TWS/LINUX_X86_64/twsinst -new -uname wauser -acceptlicense yes -tdwbhostname MDM_DOCKER -gateway local -gwid GWID_DOCKER' \
 && rm -rf /tmp/*
 
-USER ${WA_USER}
+USER 999
 RUN ${WA_DIR}/TWS/ShutDownLwa \
 && ${WA_DIR}/TWS/_uninstall/ACTIONTOOLS/TWSupdate_file -addRow ${WA_DIR}/TWS/ITA/cpa/config/JobManager.ini JobTableDir ${WA_DIR}/TWS/stdlist Launchers \
 && sed -i.bak '/AgentID/d'  ${WA_DIR}/TWS/ITA/cpa/config/JobManager.ini \
 && ${WA_DIR}/TWS/_uninstall/ACTIONTOOLS/TWSupdate_file -delRow ${WA_DIR}/TWS/ITA/cpa/config/JobManager.ini AgentID
 
+#Support Arbitrary ID
+USER 0
+RUN chgrp -R 0 ${WA_DIR}; chmod -R g=u ${WA_DIR}; chmod g=u /etc/passwd
+
+
 # Set image entrypoint
+USER 999
 ENTRYPOINT ["/start.sh"]
 
 # Set the volume
