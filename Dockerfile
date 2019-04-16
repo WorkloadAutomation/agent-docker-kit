@@ -15,6 +15,8 @@ ARG VERSION=9.4.0.0
 ARG WA_USER=wauser
 ARG WA_DIR=/home/${WA_USER}/TWA
 
+USER 0
+
 # Copy files from local
 COPY contrfiles/start.sh /start.sh
 COPY contrfiles/login.defs  /etc/login.defs
