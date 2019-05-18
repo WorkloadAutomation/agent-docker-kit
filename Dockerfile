@@ -1,5 +1,5 @@
 ####################################################################
-# Licensed Materials –Property of HCL*
+# Licensed Materials ï¿½Property of HCL*
 # 
 # (c) Copyright HCL Technologies Ltd. 2017-2018 All rights reserved.
 # * Trademark of HCL Technologies Limited
@@ -8,12 +8,16 @@
 # ARGS:
 # - ZIPURL				Specify the url used to download the installation media
 # - BUILD_DATE          Specify the build date to be used to tag internally the image
-FROM ubuntu:16.04
+ARG BASEIMAGE
+FROM ${BASEIMAGE}
+
 ARG ZIPURL
 ARG BUILD_DATE
 ARG VERSION=9.4.0.0
 ARG WA_USER=wauser
 ARG WA_DIR=/home/${WA_USER}/TWA
+ARG UID=1009
+ARG GID=1009
 
 USER 0
 
@@ -22,17 +26,9 @@ COPY contrfiles/start.sh /start.sh
 COPY contrfiles/login.defs  /etc/login.defs
 COPY contrfiles/common-password /etc/pam.d/common-password
 
-# Install some useful Linux package
-RUN echo "Installing useful packages" \
-&& apt-get update \
-&& apt-get -y dist-upgrade \
-&& apt-get install wget unzip vim net-tools bc curl libcurl3 libcurl3-dev iputils-ping dnsutils --assume-yes \
-&& apt-get clean \
-&& rm -rf /var/lib/apt/lists/*
-
 # create the ${WA_USER} for tws
 RUN echo "Creating group and user for ${WA_USER}" \
-&& groupadd -g 999 -r ${WA_USER} && useradd -u 999 -m -r -g ${WA_USER} ${WA_USER} \
+&& groupadd -g ${GID} -r ${WA_USER} && useradd -u ${UID} -m -r -g ${WA_USER} ${WA_USER} \
 && echo "${WA_USER} hard fsize unlimited" >> /etc/security/limits.conf \
 && echo "${WA_USER} soft fsize unlimited" >> /etc/security/limits.conf \
 && echo "${WA_USER} hard stack 32768" >> /etc/security/limits.conf \
@@ -59,10 +55,10 @@ RUN echo "Installing agent" \
 && unzip  TWS_LNX_X86_64_AGENT.zip \
 && rm TWS_LNX_X86_64_AGENT.zip \
 && echo "Running '/tmp/TWS/LINUX_X86_64/twsinst -new -uname wauser -acceptlicense yes -tdwbhostname MDM_DOCKER -gateway local -gwid GWID_DOCKER'" \
-&& su - wauser -c  '/tmp/TWS/LINUX_X86_64/twsinst -new -uname wauser -acceptlicense yes -tdwbhostname MDM_DOCKER -gateway local -gwid GWID_DOCKER' \
+&& (su - wauser -c  '/tmp/TWS/LINUX_X86_64/twsinst -new -uname wauser -acceptlicense yes -tdwbhostname MDM_DOCKER -gateway local -gwid GWID_DOCKER -skipcheckprereq' || cat /home/wauser/TWA/logs/precheck_result.txt /home/wauser/TWA/logs/result.txt ) \
 && rm -rf /tmp/*
 
-USER 999
+USER ${UID}
 RUN ${WA_DIR}/TWS/ShutDownLwa \
 && ${WA_DIR}/TWS/_uninstall/ACTIONTOOLS/TWSupdate_file -addRow ${WA_DIR}/TWS/ITA/cpa/config/JobManager.ini JobTableDir ${WA_DIR}/TWS/stdlist Launchers \
 && sed -i.bak '/AgentID/d'  ${WA_DIR}/TWS/ITA/cpa/config/JobManager.ini \
@@ -74,7 +70,7 @@ RUN chgrp -R 0 ${WA_DIR}; chmod -R g=u ${WA_DIR}; chmod g=u /etc/passwd
 
 
 # Set image entrypoint
-USER 999
+USER ${UID}
 ENTRYPOINT ["/start.sh"]
 
 # Set the volume

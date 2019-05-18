@@ -1,6 +1,6 @@
 #!/bin/bash
 ####################################################################
-# Licensed Materials –Property of HCL*
+# Licensed Materials ï¿½Property of HCL*
 # 
 # (c) Copyright HCL Technologies Ltd. 2017 All rights reserved.
 # * Trademark of HCL Technologies Limited
@@ -18,9 +18,11 @@ This script wrap the "docker build" command to build the Workload Scheduler agen
 OPTIONS:
    -h                              Show this message
    -z,--zipfile                    The .zip file of the image for the agent installation
-   -p,--port                       Optionally specify the HTTP port of the temporary nginx server.
-   [-v,--agver <agent version>]    Optionally specify the version of the agent to be used to TAG the Docker image (default: 9.4.0.04)
-   [-t,--imgname <image name>]     Optionally specify the name of the image you will build (default: workload-scheduler-agent)
+   -p,--port                       Optionally specifies the HTTP port of the temporary nginx server.
+   [--os=<osname>]                 Optionally specifies if base image is ubi (default), ubuntu or centos, <osname>.Dockerfile is used to build the os image
+   [--base=<baseimg>]              Optioanlly specifies an existing image to use instead of a plain os image, if --base is specified, --os is ignored
+   [-v,--agver <agent version>]    Optionally specifies the version of the agent to be used to TAG the Docker image (default: 9.4.0.05)
+   [-t,--imgname <image name>]     Optionally specifies the name of the image you will build (default: workload-automation-agent)
 EOF
 }
 
@@ -37,9 +39,11 @@ ZIPFILE=
 HTTPPORT=
 AGVER=
 IMGNAME=
+BASEIMAGE=
+OSIMG=ubi
 
 shopt -s nocasematch
-args=$(getopt -n $0 -l "help,agver:,zipfile:,port:,imgname:" -o "v:z:p:ht:" -- "$@")
+args=$(getopt -n $0 -l "help,agver:,zipfile:,port:,imgname:,base:,os:" -o "v:z:p:ht:" -- "$@")
 eval set -- "$args"
 # extract options and their arguments into variables.
 while true ; do
@@ -48,6 +52,8 @@ while true ; do
         -v|--agver)  AGVER=$2; shift 2 ;;
         -t|--imgname)  IMGNAME=$2; shift 2 ;;
         -h|--help)   UsageHelp; exit ;;
+        --base) BASEIMAGE=$2; shift 2 ;;
+        --os) OSIMG=$2; shift 2 ;;    
         --) shift ; break ;;
     esac
 done
@@ -61,12 +67,17 @@ fi
 
 if [[ -z $AGVER ]]
 then
-    AGVER=9.4.0.04
+    AGVER=9.4.0.05
 fi
 
 if [[ -z $IMGNAME ]]
 then
-    IMGNAME=workload-scheduler-agent
+    IMGNAME=workload-automation-agent
+fi
+
+if [[ -n $BASEIMAGE ]]
+then
+    OSIMG=
 fi
 
 BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
@@ -76,6 +87,27 @@ ZIPPATH=`readlink -f $ZIPPATH`
 ZIPFILENAME=`basename $ZIPFILE`
 
 NGINX_NAME="temp-nginx-$$"
+
+if [[ -n $OSIMG ]]
+then
+  BASEIMAGE=${IMGNAME}-base-os-$OSIMG
+  DKRFILE=$OSIMG.Dockerfile
+
+  if [[ ! -f $DKRFILE ]] 
+  then
+    echo
+    echo "$DKRFILE is not present, verify the value specified on --os option or that $DKRFILE is present"
+    echo "Currently available option for --os (add <osname>.Dockerfile for new options):"
+    for f in *.Dockerfile
+    do
+      echo "  --os=${f%.Dockerfile}"
+    done
+    exit 2
+  fi
+
+  echo "Building the base OS image using $OSIMG.Dockerfile"
+  docker build --force-rm --rm=true --pull -t ${BASEIMAGE} -f $OSIMG.Dockerfile . 2>&1 | tee ${logfile}
+fi
 
 echo "Starting temporary nginx server to host installation zip file"
 echo "docker run --name $NGINX_NAME -v $ZIPPATH:/usr/share/nginx/html:ro -d nginx"
@@ -88,11 +120,13 @@ echo
 ZIPURL="http://${NGINX_IP}/${ZIPFILENAME}"
 logfile="$(echo $(basename $0) | cut -f 1 -d '.').log"
 
+
 echo "Building the docker image using the following parameters:"
 echo "------------------ VARIABLE ------------------------------"
 echo "ZIPURL         = $ZIPURL"
 echo "AGVER          = $AGVER"
 echo "IMGNAME        = $IMGNAME"
+echo "BASEIMAGE      = $BASEIMAGE"
 echo "------------------ FIXED   ------------------------------"
 echo "AGENT USER     = wauser"
 echo "AGENT PATH     = /home/wauser/TWA/TWS"
@@ -105,12 +139,22 @@ sleep 5
 
 
 # Build the new image. 
-docker build --force-rm --rm=true --pull\
+docker build --force-rm --rm=true \
   --build-arg ZIPURL=$ZIPURL \
   --build-arg BUILD_DATE=$BUILD_DATE \
+  --build-arg BASEIMAGE=$BASEIMAGE \
   -t ${IMGNAME}:${AGVER} .  2>&1 | tee ${logfile}
 BUILD_RETURN_CODE=$?
 echo "BUILD RETURN CODE: $BUILD_RETURN_CODE"
+
+if [[ $BUILD_RETURN_CODE ]]
+then
+  echo
+  echo "---------------------------------------------------------"
+  echo "- Build completed, available as ${IMGNAME}:${AGVER}"
+  echo "---------------------------------------------------------"
+  echoÃŸ
+fi
 
 echo "Stopping temporary nginx server hosting installation zip file"
 docker stop $NGINX_NAME

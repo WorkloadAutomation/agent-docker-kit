@@ -18,21 +18,6 @@ fi
 MYUID=$(id -u)
 MYGID=$(id -g)
 
-if ! whoami &> /dev/null; then
-  if [ -w /etc/passwd ]; then
-    echo "Replacing wauser to $MYUID:$MYGID"
-    sed "s/999:999/$MYUID:$MYGID/g" /etc/passwd > /tmp/passwd
-    cp /tmp/passwd /etc/passwd
-    rm /tmp/passwd
-  fi
-fi
-
-mychown() {
-  if [ $MYUID -eq 0 ]; then
-    chown $*
-  fi
-}
-
 #
 # Set these variables in "docker run" to configure the agent to use your own TDWB server and agents
 #
@@ -493,7 +478,7 @@ count_running_procs()
 	PROC_NAME=$1
 	PROC_COUNT=0
 	if [ ! -z ${PROC_NAME} ];then
-		PROC_COUNT=$(pidof ${PROC_NAME} | wc -w)
+		PROC_COUNT=$(pgrep ${PROC_NAME} | wc -w)
 	fi
 	return ${PROC_COUNT}
 }
@@ -557,7 +542,13 @@ check_license() {
         exit -66
     fi
 }    
-    
+
+mychown() {
+  if [ $MYUID -eq 0 ]; then
+    chown $*
+  fi
+}
+
 rm -rf /tmp/*
 
 #Check if passed value contains a valid number
@@ -571,6 +562,31 @@ else
 		echo "Wrong value for MAXWAITONEXIT: \"${MAXWAITONEXIT}\". Maximum allowed value is 3600."
 		${MAXWAITONEXIT}=3600
 	fi
+fi
+
+# Check if container already started with different user
+if [ -f $PROPERTYFILE ]; then
+    propuid=`stat -c '%u' $PROPERTYFILE`
+    if [ $propuid -ne $MYUID ]; then
+        ACTION_TOOL_RET_COD=4
+        ACTION_TOOL_RET_STDOUT="ERROR: The container is started with uid=$MYUID, but the volume mounted on /home/wauser/TWA/TWS/stdlist has been used with uid=$propuid. Restart with uid=$propuid or with an empty volume"
+		exitOnError
+    fi
+fi
+
+if ! whoami &> /dev/null; then
+  if [ -w /etc/passwd ]; then
+    echo "Replacing wauser to $MYUID:$MYGID"
+
+    #get current wauser
+    p=`cat /etc/passwd | grep wauser`
+    IFS=":" tokens=( $p )
+    cuid=${tokens[2]}
+    cgid=${tokens[3]}
+    sed "s/$cuid:$cgid/$MYUID:$MYGID/g" /etc/passwd > /tmp/passwd
+    cp /tmp/passwd /etc/passwd
+    rm /tmp/passwd
+  fi
 fi
 
 # Check if we are in the new BM Kube env
@@ -623,13 +639,13 @@ sleep 30
 store_agent_ID
 # infinite loop for the agent
 runningJobs=9999
-agentPID=$(pidof ${AGENT_PROC})
+agentPID=$(pgrep ${AGENT_PROC})
 while [ ! -z "$agentPID" ]
   do
 	count_running_jobs ${runningJobs}
 	runningJobs=$?
     sleep 30
-    agentPID=$(pidof ${AGENT_PROC})
+    agentPID=$(pgrep ${AGENT_PROC})
   done
 RC=$?
 exit $RC
