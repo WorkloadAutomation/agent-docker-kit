@@ -1,4 +1,4 @@
-# Note: this repository just apply to HWA/IWS 9.4, for 9.5 version look at official containers and documentation
+## Note: this repository only applies to HWA/IWS 9.4, for 9.5 version look at official containers and documentation
 
 # Creating a Docker image to run dynamic and z-centric agents
 
