@@ -1,3 +1,5 @@
+# Note: this repository just apply to HWA/IWS 9.4, for 9.5 version look at official containers and documentation
+
 # Creating a Docker image to run dynamic and z-centric agents
 
 You can run dynamic and z-centric agents in docker container, this can be used to run jobs remotely, e.g. to call REST APIs or database stored procedures, or to run jobs within the container.
