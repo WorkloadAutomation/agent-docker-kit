@@ -1,5 +1,11 @@
 ## Note: this repository only applies to HWA/IWS 9.4, for 9.5 version look at official containers and documentation
 
+| Deployment | IBM Workload Automation | HCL Workload Automation |
+|---|---|---|
+| Kubernetes with Helm Charts | [ibm-workload-automation-chart](https://github.com/WorkloadAutomation/ibm-workload-automation-chart) | [hcl-workload-automation-chart](https://github.com/WorkloadAutomation/hcl-workload-automation-chart) |
+| Docker compose | [ibm-workload-automation-docker-compose](https://github.com/WorkloadAutomation/ibm-workload-automation-docker-compose) | [hcl-workload-automation-docker-compose](https://github.com/WorkloadAutomation/hcl-workload-automation-docker-compose) |
+
+
 # Creating a Docker image to run dynamic and z-centric agents
 
 You can run dynamic and z-centric agents in docker container, this can be used to run jobs remotely, e.g. to call REST APIs or database stored procedures, or to run jobs within the container.
